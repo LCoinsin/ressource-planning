@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String   @default("[]") // JSON array ex: '["CAN_EDIT_GANTT","CAN_MANAGE_USERS"]'
+  createdAt   DateTime @default(now())
+  members     Member[]
+}
+
+model Member {
+  id           String    @id @default(cuid())
+  nom          String
+  prenom       String
+  role         String // rôle métier (Développeur Frontend, Chef de projet...)
+  email        String?   @unique
+  passwordHash String?
+  isActive     Boolean   @default(true)
+  roleId       String?
+  appRole      Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  dateArrivee  DateTime
+  dateDepart   DateTime?
+  createdAt    DateTime  @default(now())
+  tasks        Task[]
+}
+
+model ProjectRequest {
+  id           String    @id @default(cuid())
+  contactName  String
+  contactEmail String
+  description  String
+  desiredDate  DateTime?
+  status       String    @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt    DateTime  @default(now())
+}
+
+model Technology {
+  id        String   @id @default(cuid())
+  nom       String   @unique
+  couleur   String   // hex color
+  iconName  String   // Lucide icon name
+  createdAt DateTime @default(now())
+  tasks     Task[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  nom       String
+  client    String
+  status    String   @default("ACTIVE") // ACTIVE, PAUSED, DONE
+  createdAt DateTime @default(now())
+  tasks     Task[]
+}
+
+model Task {
+  id           String      @id @default(cuid())
+  titre        String
+  type         String      // SPRINT or TASK
+  dateDebut    DateTime
+  dateFin      DateTime
+  load         Float       @default(1.0)
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members      Member[]    // N-N implicit join table
+  technologyId String?
+  technology   Technology? @relation(fields: [technologyId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+}

@@ -1,0 +1,264 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MultiMemberSelect } from "@/components/multi-member-select";
+import { updateTask, deleteTask } from "@/actions/tasks";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import type { GanttTask } from "./packing";
+import { Trash2 } from "lucide-react";
+
+type Member = { id: string; nom: string; prenom: string };
+type Project = { id: string; nom: string };
+type Technology = { id: string; nom: string; couleur: string };
+
+interface TaskEditDialogProps {
+  task: GanttTask | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  members: Member[];
+  projects: Project[];
+  technologies: Technology[];
+}
+
+export function TaskEditDialog({
+  task,
+  open,
+  onOpenChange,
+  members,
+  projects,
+  technologies,
+}: TaskEditDialogProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const [titre, setTitre] = useState("");
+  const [type, setType] = useState("TASK");
+  const [dateDebut, setDateDebut] = useState("");
+  const [dateFin, setDateFin] = useState("");
+  const [load, setLoad] = useState("1");
+  const [projectId, setProjectId] = useState("");
+  const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [technologyId, setTechnologyId] = useState("");
+
+  const [prevTaskId, setPrevTaskId] = useState<string | null>(null);
+  if (task && task.id !== prevTaskId) {
+    setPrevTaskId(task.id);
+    setTitre(task.titre);
+    setType(task.type);
+    setDateDebut(new Date(task.dateDebut).toISOString().split("T")[0]);
+    setDateFin(new Date(task.dateFin).toISOString().split("T")[0]);
+    setLoad(String(task.load));
+    setProjectId(task.projectId);
+    setMemberIds(task.members.map((m) => m.id));
+    setTechnologyId(task.technologyId ?? "");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!task) return;
+    setLoading(true);
+    try {
+      await updateTask(task.id, {
+        titre,
+        type: type as "SPRINT" | "TASK",
+        dateDebut,
+        dateFin,
+        load: parseFloat(load),
+        projectId,
+        memberIds,
+        technologyId: technologyId || null,
+      });
+      toast.success("Tache mise a jour");
+      router.refresh();
+      onOpenChange(false);
+    } catch {
+      toast.error("Une erreur est survenue");
+    }
+    setLoading(false);
+  }
+
+  async function handleDelete() {
+    if (!task || !confirm("Supprimer cette tache ?")) return;
+    setLoading(true);
+    try {
+      await deleteTask(task.id);
+      toast.success("Tache supprimee");
+      router.refresh();
+      onOpenChange(false);
+    } catch {
+      toast.error("Une erreur est survenue");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Modifier la tache</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-titre">Titre</Label>
+            <Input
+              id="edit-titre"
+              value={titre}
+              onChange={(e) => setTitre(e.target.value)}
+              className="rounded-xl border-border/50"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="rounded-xl border-border/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TASK">Tache</SelectItem>
+                  <SelectItem value="SPRINT">Sprint</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-load">Charge (0-1)</Label>
+              <Input
+                id="edit-load"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                value={load}
+                onChange={(e) => setLoad(e.target.value)}
+                className="rounded-xl border-border/50"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-dateDebut">Debut</Label>
+              <Input
+                id="edit-dateDebut"
+                type="date"
+                value={dateDebut}
+                onChange={(e) => setDateDebut(e.target.value)}
+                className="rounded-xl border-border/50"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-dateFin">Fin</Label>
+              <Input
+                id="edit-dateFin"
+                type="date"
+                value={dateFin}
+                onChange={(e) => setDateFin(e.target.value)}
+                className="rounded-xl border-border/50"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Projet</Label>
+            <Select value={projectId} onValueChange={setProjectId}>
+              <SelectTrigger className="rounded-xl border-border/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Membres</Label>
+            <MultiMemberSelect
+              members={members}
+              selectedIds={memberIds}
+              onChange={setMemberIds}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Technologie</Label>
+            <Select
+              value={technologyId || "none"}
+              onValueChange={(v) => setTechnologyId(v === "none" ? "" : v)}
+            >
+              <SelectTrigger className="rounded-xl border-border/50">
+                <SelectValue placeholder="Aucune" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucune</SelectItem>
+                {technologies.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: t.couleur }}
+                      />
+                      {t.nom}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-between pt-2">
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="rounded-xl"
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Supprimer
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => onOpenChange(false)}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" className="rounded-xl" disabled={loading}>
+                {loading ? "..." : "Enregistrer"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
