@@ -63,7 +63,7 @@ function NavContent({
   role?: string;
 }) {
   const filteredItems = navItems.filter(
-    (item) => !item.admin || role === "ADMIN"
+    (item) => !item.admin || role === "Admin"
   );
 
   return (

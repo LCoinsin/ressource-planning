@@ -17,10 +17,10 @@ export function Header() {
         {user && (
           <div className="flex items-center gap-3">
             <Badge
-              variant={user.role === "ADMIN" ? "default" : "secondary"}
+              variant={user.role === "Admin" ? "default" : "secondary"}
               className="rounded-lg text-[10px] font-semibold"
             >
-              {user.role === "ADMIN" ? "Admin" : "Visiteur"}
+              {user.role === "Admin" ? "Admin" : "Visiteur"}
             </Badge>
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8 border border-border/50">
