@@ -155,7 +155,7 @@ export function DashboardClient({
         <div className="px-4 pb-4">
           <CapacityChart
             tasks={filteredTasks}
-            members={members}
+            members={members.filter((m) => m.isResource !== false)}
             start={start}
             end={end}
             zoom={zoom}

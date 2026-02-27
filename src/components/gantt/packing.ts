@@ -36,9 +36,10 @@ export interface PackedLane {
 /**
  * Pack tasks into lanes so non-overlapping tasks share the same row.
  *
- * Two tasks do NOT collide if A.endDate <= B.startDate (at day level).
- * This means if task A ends on 2024-10-15 and task B starts on 2024-10-15,
- * they can share the same lane (A finishes, B begins on the same day).
+ * Two tasks collide when their date ranges touch or overlap:
+ * if A ends on 2024-10-15 and B starts on 2024-10-15, they collide
+ * (same day = visual overlap on the Gantt).
+ * B can only reuse A's lane if B.startDate is strictly after A.endDate.
  */
 export function packTasks(tasks: GanttTask[]): PackedLane[] {
   const sorted = [...tasks].sort(
@@ -49,7 +50,6 @@ export function packTasks(tasks: GanttTask[]): PackedLane[] {
   const lanes: PackedLane[] = [];
 
   for (const task of sorted) {
-    // Normalize to day-level to avoid time-of-day causing false collisions
     const taskStartDay = startOfDay(new Date(task.dateDebut)).getTime();
 
     let placed = false;
@@ -57,8 +57,8 @@ export function packTasks(tasks: GanttTask[]): PackedLane[] {
       const lastTask = lane.tasks[lane.tasks.length - 1];
       const lastEndDay = startOfDay(new Date(lastTask.dateFin)).getTime();
 
-      // No collision: B starts on or after the day A ends
-      if (taskStartDay >= lastEndDay) {
+      // Strictly after: same day still counts as collision
+      if (taskStartDay > lastEndDay) {
         lane.tasks.push(task);
         placed = true;
         break;
