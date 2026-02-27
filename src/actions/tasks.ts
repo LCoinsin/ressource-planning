@@ -6,11 +6,12 @@ import { z } from "zod";
 
 const taskSchema = z.object({
   titre: z.string().min(1, "Le titre est requis"),
-  type: z.enum(["SPRINT", "TASK"]),
+  type: z.enum(["SPRINT", "TASK"]).default("TASK"),
   dateDebut: z.string().min(1, "La date de debut est requise"),
   dateFin: z.string().min(1, "La date de fin est requise"),
   load: z.number().min(0).max(1),
   projectId: z.string().min(1, "Le projet est requis"),
+  sprintId: z.string().optional().nullable(),
   memberIds: z.array(z.string()).default([]),
   technologyId: z.string().optional().nullable(),
 });
@@ -20,6 +21,7 @@ export async function getTasks() {
     orderBy: { dateDebut: "asc" },
     include: {
       project: true,
+      sprint: true,
       members: true,
       technology: true,
     },
@@ -41,6 +43,7 @@ export async function getTasksFiltered(filters: {
     orderBy: { dateDebut: "asc" },
     include: {
       project: true,
+      sprint: true,
       members: true,
       technology: true,
     },
@@ -57,6 +60,7 @@ export async function createTask(data: z.infer<typeof taskSchema>) {
       dateFin: new Date(parsed.dateFin),
       load: parsed.load,
       projectId: parsed.projectId,
+      sprintId: parsed.sprintId || null,
       members: {
         connect: parsed.memberIds.map((id) => ({ id })),
       },
@@ -80,6 +84,7 @@ export async function updateTask(
       dateFin: new Date(parsed.dateFin),
       load: parsed.load,
       projectId: parsed.projectId,
+      sprintId: parsed.sprintId || null,
       members: {
         set: parsed.memberIds.map((id) => ({ id })),
       },

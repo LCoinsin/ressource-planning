@@ -32,6 +32,7 @@ export default async function PublicPage() {
     dateDebut: t.dateDebut.toISOString(),
     dateFin: t.dateFin.toISOString(),
     createdAt: t.createdAt.toISOString(),
+    sprintId: t.sprintId ?? null,
     technology: t.technology
       ? { ...t.technology, createdAt: t.technology.createdAt.toISOString() }
       : null,

@@ -92,13 +92,18 @@ export function GanttPublic({ tasks }: GanttPublicProps) {
                     end,
                     "week"
                   );
+                  const isSprint = "taskCount" in task;
+                  const color =
+                    "technology" in task
+                      ? task.technology?.couleur ?? "#6B7280"
+                      : "#6366F1";
                   return (
                     <AnonymousBar
                       key={task.id}
-                      color={task.technology?.couleur ?? "#6B7280"}
+                      color={color}
                       left={left}
                       width={width}
-                      isSprint={task.type === "SPRINT"}
+                      isSprint={isSprint}
                     />
                   );
                 })}

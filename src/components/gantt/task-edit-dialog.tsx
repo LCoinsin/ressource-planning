@@ -49,7 +49,7 @@ export function TaskEditDialog({
   const [loading, setLoading] = useState(false);
 
   const [titre, setTitre] = useState("");
-  const [type, setType] = useState("TASK");
+  const type = "TASK";
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [load, setLoad] = useState("1");
@@ -61,7 +61,6 @@ export function TaskEditDialog({
   if (task && task.id !== prevTaskId) {
     setPrevTaskId(task.id);
     setTitre(task.titre);
-    setType(task.type);
     setDateDebut(new Date(task.dateDebut).toISOString().split("T")[0]);
     setDateFin(new Date(task.dateFin).toISOString().split("T")[0]);
     setLoad(String(task.load));
@@ -126,33 +125,19 @@ export function TaskEditDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="rounded-xl border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TASK">Tache</SelectItem>
-                  <SelectItem value="SPRINT">Sprint</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-load">Charge (0-1)</Label>
-              <Input
-                id="edit-load"
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
-                value={load}
-                onChange={(e) => setLoad(e.target.value)}
-                className="rounded-xl border-border/50"
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-load">Charge (0-1)</Label>
+            <Input
+              id="edit-load"
+              type="number"
+              min="0"
+              max="1"
+              step="0.1"
+              value={load}
+              onChange={(e) => setLoad(e.target.value)}
+              className="rounded-xl border-border/50"
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

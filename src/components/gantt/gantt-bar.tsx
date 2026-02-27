@@ -1,7 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import type { GanttTask } from "./packing";
+import type { GanttTask, GanttSprint, GanttProject } from "./packing";
 import {
   Tooltip,
   TooltipContent,
@@ -12,6 +11,10 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { SafeSvgIcon } from "@/components/ui/safe-svg-icon";
 import * as LucideIcons from "lucide-react";
+
+/* ------------------------------------------------------------------ */
+/*  Task bar (Vue Detaillee)                                           */
+/* ------------------------------------------------------------------ */
 
 interface GanttBarProps {
   task: GanttTask;
@@ -68,7 +71,6 @@ function TechIcon({ technology }: { technology: GanttTask["technology"] }) {
 }
 
 export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
-  const isSprint = task.type === "SPRINT";
   const color = task.technology?.couleur ?? "#6B7280";
   const loadPerMember =
     task.members.length > 0
@@ -81,22 +83,16 @@ export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
         <TooltipTrigger asChild>
           <button
             onClick={() => onClick(task)}
-            className={cn(
-              "absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-2 px-2.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md",
-              isSprint ? "border border-dashed" : "shadow-sm"
-            )}
+            className="absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-2 px-2.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md shadow-sm"
             style={{
               left: `${left}%`,
               width: `${Math.max(width, 0.5)}%`,
-              backgroundColor: isSprint ? `${color}15` : color,
-              color: isSprint ? color : "#fff",
-              borderColor: isSprint ? `${color}60` : "transparent",
+              backgroundColor: color,
+              color: "#fff",
             }}
           >
             {task.technology && <TechIcon technology={task.technology} />}
-            <span className="truncate flex-1">
-              {isSprint ? task.project.nom : task.titre}
-            </span>
+            <span className="truncate flex-1">{task.titre}</span>
             {width > 3 && <MemberAvatars members={task.members} />}
           </button>
         </TooltipTrigger>
@@ -130,6 +126,145 @@ export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
               Charge : {Math.round(task.load * 100)}% total
               {task.members.length > 1 && ` (${loadPerMember}% / pers.)`}
             </p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sprint bar (Vue Detaillee) — dashed border + task count badge      */
+/* ------------------------------------------------------------------ */
+
+interface SprintBarProps {
+  sprint: GanttSprint;
+  left: number;
+  width: number;
+  onClick: (sprint: GanttSprint) => void;
+}
+
+export function SprintBar({ sprint, left, width, onClick }: SprintBarProps) {
+  const color = "#6366F1"; // indigo for sprints
+
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => onClick(sprint)}
+            className="absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-2 px-2.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md border border-dashed"
+            style={{
+              left: `${left}%`,
+              width: `${Math.max(width, 0.5)}%`,
+              backgroundColor: `${color}15`,
+              color: color,
+              borderColor: `${color}60`,
+            }}
+          >
+            <span className="truncate flex-1">{sprint.titre}</span>
+            {width > 3 && (
+              <span
+                className="flex-shrink-0 inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{ backgroundColor: `${color}20` }}
+              >
+                {sprint.taskCount} tache{sprint.taskCount !== 1 ? "s" : ""}
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          className="max-w-xs rounded-xl border-border/50"
+        >
+          <div className="space-y-1.5">
+            <p className="font-semibold">{sprint.titre}</p>
+            <p className="text-xs text-muted-foreground">
+              {sprint.project.nom}
+            </p>
+            <p className="text-xs">
+              {format(new Date(sprint.dateDebut), "dd MMM", { locale: fr })} -{" "}
+              {format(new Date(sprint.dateFin), "dd MMM yyyy", { locale: fr })}
+            </p>
+            <p className="text-xs">
+              {sprint.taskCount} tache{sprint.taskCount !== 1 ? "s" : ""}
+            </p>
+            {sprint.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {sprint.description}
+              </p>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Project bar (Vue Macro)                                            */
+/* ------------------------------------------------------------------ */
+
+interface ProjectBarProps {
+  project: GanttProject;
+  left: number;
+  width: number;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "#10B981",
+  PAUSED: "#F59E0B",
+  DONE: "#6B7280",
+};
+
+export function ProjectBar({ project, left, width }: ProjectBarProps) {
+  const color = STATUS_COLORS[project.status] ?? "#6B7280";
+
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>
+          <div
+            className="absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-2 px-3 overflow-hidden shadow-sm"
+            style={{
+              left: `${left}%`,
+              width: `${Math.max(width, 0.5)}%`,
+              backgroundColor: color,
+              color: "#fff",
+            }}
+          >
+            <span className="truncate flex-1 font-semibold">
+              {project.nom}
+            </span>
+            {width > 4 && (
+              <span className="flex-shrink-0 text-[10px] opacity-80">
+                {project.client}
+              </span>
+            )}
+            {width > 6 && (
+              <span className="flex-shrink-0 inline-flex items-center rounded-lg bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold">
+                {project.sprintCount}S · {project.taskCount}T
+              </span>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          className="max-w-xs rounded-xl border-border/50"
+        >
+          <div className="space-y-1.5">
+            <p className="font-semibold">{project.nom}</p>
+            <p className="text-xs text-muted-foreground">{project.client}</p>
+            <p className="text-xs">
+              {format(new Date(project.dateDebut), "dd MMM", { locale: fr })} -{" "}
+              {format(new Date(project.dateFin), "dd MMM yyyy", { locale: fr })}
+            </p>
+            <p className="text-xs">
+              {project.sprintCount} sprint
+              {project.sprintCount !== 1 ? "s" : ""} ·{" "}
+              {project.taskCount} tache{project.taskCount !== 1 ? "s" : ""}
+            </p>
+            <p className="text-xs capitalize">{project.status.toLowerCase()}</p>
           </div>
         </TooltipContent>
       </Tooltip>

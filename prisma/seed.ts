@@ -128,18 +128,57 @@ async function main() {
     data: { nom: "API Donnees", client: "Enedis", status: "ACTIVE" },
   });
 
-  // 6. Create tasks
+  // 6. Create sprints (Project > Sprint hierarchy)
   const now = new Date();
   const weekMs = 7 * 24 * 60 * 60 * 1000;
 
-  await prisma.task.create({
+  const sprint1 = await prisma.sprint.create({
     data: {
       titre: "Sprint 1 - Portail",
-      type: "SPRINT",
+      description:
+        "Premier sprint du portail client. Mise en place de l'architecture et des composants de base.",
       dateDebut: new Date(now.getTime() - 2 * weekMs),
+      dateFin: new Date(now.getTime() + 1 * weekMs),
+      projectId: project1.id,
+    },
+  });
+
+  const sprint2 = await prisma.sprint.create({
+    data: {
+      titre: "Sprint 2 - Portail",
+      description:
+        "Second sprint : fonctionnalites avancees et integration API.",
+      dateDebut: new Date(now.getTime() + 1 * weekMs),
+      dateFin: new Date(now.getTime() + 3 * weekMs),
+      projectId: project1.id,
+    },
+  });
+
+  // 7. Create tasks (Sprint > Task hierarchy)
+  await prisma.task.create({
+    data: {
+      titre: "Setup composants UI",
+      type: "TASK",
+      dateDebut: new Date(now.getTime() - 2 * weekMs),
+      dateFin: new Date(now.getTime() - 1 * weekMs),
+      load: 0.8,
+      isCompleted: true,
+      projectId: project1.id,
+      sprintId: sprint1.id,
+      technologyId: techReact.id,
+      members: { connect: [{ id: member1.id }] },
+    },
+  });
+
+  await prisma.task.create({
+    data: {
+      titre: "Integration maquettes",
+      type: "TASK",
+      dateDebut: new Date(now.getTime() - 1 * weekMs),
       dateFin: new Date(now.getTime() + 1 * weekMs),
       load: 1.0,
       projectId: project1.id,
+      sprintId: sprint1.id,
       technologyId: techReact.id,
       members: { connect: [{ id: member1.id }, { id: member3.id }] },
     },
@@ -160,14 +199,17 @@ async function main() {
 
   await prisma.task.create({
     data: {
-      titre: "Sprint 2 - Portail",
-      type: "SPRINT",
+      titre: "Refactoring composants UI",
+      type: "TASK",
       dateDebut: new Date(now.getTime() + 1 * weekMs),
-      dateFin: new Date(now.getTime() + 3 * weekMs),
-      load: 1.0,
+      dateFin: new Date(now.getTime() + 2 * weekMs),
+      load: 0.6,
       projectId: project1.id,
-      technologyId: techReact.id,
-      members: { connect: [{ id: member1.id }] },
+      sprintId: sprint2.id,
+      technologyId: techTypeScript.id,
+      members: {
+        connect: [{ id: member1.id }, { id: member2.id }, { id: member3.id }],
+      },
     },
   });
 
@@ -192,23 +234,9 @@ async function main() {
       dateFin: new Date(now.getTime() + 4 * weekMs),
       load: 0.5,
       projectId: project1.id,
+      sprintId: sprint2.id,
       technologyId: techTypeScript.id,
       members: { connect: [{ id: member2.id }, { id: member3.id }] },
-    },
-  });
-
-  await prisma.task.create({
-    data: {
-      titre: "Refactoring composants UI",
-      type: "TASK",
-      dateDebut: new Date(now.getTime() + 1 * weekMs),
-      dateFin: new Date(now.getTime() + 2 * weekMs),
-      load: 0.6,
-      projectId: project1.id,
-      technologyId: techTypeScript.id,
-      members: {
-        connect: [{ id: member1.id }, { id: member2.id }, { id: member3.id }],
-      },
     },
   });
 

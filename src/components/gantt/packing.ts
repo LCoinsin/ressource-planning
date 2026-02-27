@@ -1,22 +1,25 @@
 import type { ZoomLevel } from "@/store/gantt-store";
 import {
   differenceInDays,
-  differenceInWeeks,
-  differenceInMonths,
   eachWeekOfInterval,
   eachMonthOfInterval,
-  eachDayOfInterval,
   startOfDay,
 } from "date-fns";
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 export interface GanttTask {
   id: string;
   titre: string;
-  type: string;
+  type: string; // "TASK"
   dateDebut: string;
   dateFin: string;
   load: number;
+  isCompleted: boolean;
   projectId: string;
+  sprintId: string | null;
   technologyId: string | null;
   project: { id: string; nom: string; client: string; status: string };
   members: { id: string; nom: string; prenom: string }[];
@@ -29,97 +32,162 @@ export interface GanttTask {
   } | null;
 }
 
-export interface PackedLane {
-  tasks: GanttTask[];
+export interface GanttSprint {
+  id: string;
+  titre: string;
+  type: "SPRINT";
+  description: string | null;
+  dateDebut: string;
+  dateFin: string;
+  projectId: string;
+  project: { id: string; nom: string; client: string; status: string };
+  taskCount: number;
 }
 
+export interface GanttProject {
+  id: string;
+  nom: string;
+  client: string;
+  status: string;
+  dateDebut: string;
+  dateFin: string;
+  sprintCount: number;
+  taskCount: number;
+}
+
+/** Union of everything that can appear as a bar on the Gantt */
+export type GanttItem = GanttTask | GanttSprint | GanttProject;
+
+export interface PackedLane<T = GanttItem> {
+  tasks: T[];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function getStart(item: { dateDebut: string }): string {
+  return item.dateDebut;
+}
+
+function getEnd(item: { dateFin: string }): string {
+  return item.dateFin;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Packing                                                            */
+/* ------------------------------------------------------------------ */
+
 /**
- * Pack tasks into lanes so non-overlapping tasks share the same row.
- *
- * Two tasks collide when their date ranges touch or overlap:
- * if A ends on 2024-10-15 and B starts on 2024-10-15, they collide
- * (same day = visual overlap on the Gantt).
- * B can only reuse A's lane if B.startDate is strictly after A.endDate.
+ * Generic packing: place items into lanes so non-overlapping items share rows.
+ * Same-day end/start = collision (items go on separate lanes).
  */
-export function packTasks(tasks: GanttTask[]): PackedLane[] {
-  const sorted = [...tasks].sort(
+export function packItems<T extends { dateDebut: string; dateFin: string }>(
+  items: T[]
+): PackedLane<T>[] {
+  const sorted = [...items].sort(
     (a, b) =>
-      new Date(a.dateDebut).getTime() - new Date(b.dateDebut).getTime()
+      new Date(getStart(a)).getTime() - new Date(getStart(b)).getTime()
   );
 
-  const lanes: PackedLane[] = [];
+  const lanes: PackedLane<T>[] = [];
 
-  for (const task of sorted) {
-    const taskStartDay = startOfDay(new Date(task.dateDebut)).getTime();
+  for (const item of sorted) {
+    const itemStartDay = startOfDay(new Date(getStart(item))).getTime();
 
     let placed = false;
     for (const lane of lanes) {
-      const lastTask = lane.tasks[lane.tasks.length - 1];
-      const lastEndDay = startOfDay(new Date(lastTask.dateFin)).getTime();
+      const lastItem = lane.tasks[lane.tasks.length - 1];
+      const lastEndDay = startOfDay(new Date(getEnd(lastItem))).getTime();
 
-      // Strictly after: same day still counts as collision
-      if (taskStartDay > lastEndDay) {
-        lane.tasks.push(task);
+      if (itemStartDay > lastEndDay) {
+        lane.tasks.push(item);
         placed = true;
         break;
       }
     }
 
     if (!placed) {
-      lanes.push({ tasks: [task] });
+      lanes.push({ tasks: [item] });
     }
   }
 
   return lanes;
 }
 
+/** Backward-compatible alias */
+export function packTasks(tasks: GanttTask[]): PackedLane<GanttTask>[] {
+  return packItems(tasks);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Grouping                                                           */
+/* ------------------------------------------------------------------ */
+
 /**
- * Group tasks then pack each group.
+ * Group tasks/sprints then pack each group.
  */
 export function groupAndPack(
-  tasks: GanttTask[],
+  items: (GanttTask | GanttSprint)[],
   groupBy: "none" | "member" | "project"
-): { label: string; lanes: PackedLane[] }[] {
+): { label: string; lanes: PackedLane<GanttTask | GanttSprint>[] }[] {
   if (groupBy === "none") {
-    return [{ label: "", lanes: packTasks(tasks) }];
+    return [{ label: "", lanes: packItems(items) }];
   }
 
-  const groups = new Map<string, { label: string; tasks: GanttTask[] }>();
+  const groups = new Map<
+    string,
+    { label: string; items: (GanttTask | GanttSprint)[] }
+  >();
 
-  for (const task of tasks) {
+  for (const item of items) {
     if (groupBy === "member") {
-      if (task.members.length === 0) {
+      const members = "members" in item ? item.members : [];
+
+      if (members.length === 0) {
         const key = "non-assigne";
         if (!groups.has(key))
-          groups.set(key, { label: "Non assigne", tasks: [] });
-        groups.get(key)!.tasks.push(task);
+          groups.set(key, { label: "Non assigne", items: [] });
+        groups.get(key)!.items.push(item);
       } else {
-        for (const member of task.members) {
+        for (const member of members) {
           const key = member.id;
           const label = `${member.prenom} ${member.nom}`;
-          if (!groups.has(key)) groups.set(key, { label, tasks: [] });
-          groups.get(key)!.tasks.push(task);
+          if (!groups.has(key)) groups.set(key, { label, items: [] });
+          groups.get(key)!.items.push(item);
         }
       }
     } else {
-      const key = task.projectId;
-      const label = task.project.nom;
-      if (!groups.has(key)) groups.set(key, { label, tasks: [] });
-      groups.get(key)!.tasks.push(task);
+      const key = item.projectId;
+      const label = item.project.nom;
+      if (!groups.has(key)) groups.set(key, { label, items: [] });
+      groups.get(key)!.items.push(item);
     }
   }
 
   return Array.from(groups.values()).map((g) => ({
     label: g.label,
-    lanes: packTasks(g.tasks),
+    lanes: packItems(g.items),
   }));
 }
 
 /**
- * Calculate time range with padding.
+ * Pack projects for Macro view.
  */
-export function getTimeRange(tasks: GanttTask[]): { start: Date; end: Date } {
-  if (tasks.length === 0) {
+export function packProjects(
+  projects: GanttProject[]
+): PackedLane<GanttProject>[] {
+  return packItems(projects);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Time range                                                         */
+/* ------------------------------------------------------------------ */
+
+export function getTimeRange(
+  items: { dateDebut: string; dateFin: string }[]
+): { start: Date; end: Date } {
+  if (items.length === 0) {
     const now = new Date();
     const start = new Date(now);
     start.setDate(start.getDate() - 7);
@@ -128,12 +196,12 @@ export function getTimeRange(tasks: GanttTask[]): { start: Date; end: Date } {
     return { start, end };
   }
 
-  let minDate = new Date(tasks[0].dateDebut);
-  let maxDate = new Date(tasks[0].dateFin);
+  let minDate = new Date(items[0].dateDebut);
+  let maxDate = new Date(items[0].dateFin);
 
-  for (const task of tasks) {
-    const s = new Date(task.dateDebut);
-    const e = new Date(task.dateFin);
+  for (const item of items) {
+    const s = new Date(item.dateDebut);
+    const e = new Date(item.dateFin);
     if (s < minDate) minDate = s;
     if (e > maxDate) maxDate = e;
   }
@@ -146,7 +214,9 @@ export function getTimeRange(tasks: GanttTask[]): { start: Date; end: Date } {
   return { start, end };
 }
 
-// --- Zoom helpers ---
+/* ------------------------------------------------------------------ */
+/*  Zoom helpers                                                       */
+/* ------------------------------------------------------------------ */
 
 export const COLUMN_WIDTHS: Record<ZoomLevel, number> = {
   day: 32,
@@ -174,12 +244,10 @@ export function getBarPositionPercent(
   taskEnd: string,
   rangeStart: Date,
   rangeEnd: Date,
-  zoom: ZoomLevel
+  _zoom: ZoomLevel
 ): { left: number; width: number } {
   const totalDays = differenceInDays(rangeEnd, rangeStart) + 1;
 
-  // Always use day-level precision for bar positioning regardless of zoom.
-  // The zoom only affects header display and column width.
   const s = differenceInDays(new Date(taskStart), rangeStart);
   const e = differenceInDays(new Date(taskEnd), rangeStart);
   const left = (s / totalDays) * 100;
@@ -194,5 +262,8 @@ export function getMinWidth(
   zoom: ZoomLevel
 ): number {
   const totalDays = differenceInDays(end, start) + 1;
-  return totalDays * COLUMN_WIDTHS[zoom] / (zoom === "day" ? 1 : zoom === "week" ? 7 : 30);
+  return (
+    (totalDays * COLUMN_WIDTHS[zoom]) /
+    (zoom === "day" ? 1 : zoom === "week" ? 7 : 30)
+  );
 }
