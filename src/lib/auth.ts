@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { parsePermissions } from "@/lib/permissions";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       name: "Credentials",
