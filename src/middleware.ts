@@ -1,14 +1,11 @@
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 const publicPaths = ["/", "/login"];
 
-export async function middleware(req: NextRequest) {
+export default auth((req) => {
   const { pathname } = req.nextUrl;
-
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-  const isLoggedIn = !!token;
+  const isLoggedIn = !!req.auth;
 
   // Pages publiques → laisser passer
   if (publicPaths.includes(pathname)) {
@@ -25,16 +22,17 @@ export async function middleware(req: NextRequest) {
 
   // Routes admin → vérifier rôle ou permissions
   if (pathname.startsWith("/admin")) {
-    const permissions = (token.permissions as string[]) || [];
+    const user = req.auth?.user as { role?: string; permissions?: string[] } | undefined;
+    const permissions = user?.permissions ?? [];
     const isAdmin =
-      token.role === "Admin" || permissions.includes("CAN_MANAGE_USERS");
+      user?.role === "Admin" || permissions.includes("CAN_MANAGE_USERS");
     if (!isAdmin) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
