@@ -26,44 +26,49 @@ const navItems = [
     href: "/admin/projects",
     label: "Projets",
     icon: FolderKanban,
-    admin: true,
+    permission: "CAN_MANAGE_PROJECTS",
   },
-  { href: "/admin/team", label: "Equipe", icon: Users, admin: true },
+  {
+    href: "/admin/team",
+    label: "Equipe",
+    icon: Users,
+    permission: "CAN_MANAGE_TEAM",
+  },
   {
     href: "/admin/technologies",
     label: "Technologies",
     icon: Cpu,
-    admin: true,
+    permission: "CAN_MANAGE_TECHNOLOGIES",
   },
   {
     href: "/admin/users",
     label: "Utilisateurs",
     icon: UserCog,
-    admin: true,
+    permission: "CAN_MANAGE_USERS",
   },
   {
     href: "/admin/roles",
     label: "Roles",
     icon: Shield,
-    admin: true,
+    permission: "CAN_MANAGE_ROLES",
   },
   {
     href: "/admin/requests",
     label: "Demandes",
     icon: Inbox,
-    admin: true,
+    permission: "CAN_VIEW_REQUESTS",
   },
 ];
 
 function NavContent({
   pathname,
-  role,
+  permissions,
 }: {
   pathname: string;
-  role?: string;
+  permissions: string[];
 }) {
   const filteredItems = navItems.filter(
-    (item) => !item.admin || role === "Admin"
+    (item) => !item.permission || permissions.includes(item.permission)
   );
 
   return (
@@ -121,11 +126,11 @@ function NavContent({
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = session?.user?.role;
+  const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r border-border/40 bg-muted/20 h-screen sticky top-0">
-      <NavContent pathname={pathname} role={role} />
+      <NavContent pathname={pathname} permissions={permissions} />
     </aside>
   );
 }
@@ -133,7 +138,7 @@ export function Sidebar() {
 export function MobileSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = session?.user?.role;
+  const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
   const [open, setOpen] = useState(false);
 
   return (
@@ -145,7 +150,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-64 rounded-r-2xl">
         <div onClick={() => setOpen(false)}>
-          <NavContent pathname={pathname} role={role} />
+          <NavContent pathname={pathname} permissions={permissions} />
         </div>
       </SheetContent>
     </Sheet>

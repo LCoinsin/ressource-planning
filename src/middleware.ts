@@ -30,12 +30,27 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Routes admin → vérifier rôle ou permissions
+  // Routes admin → vérifier la permission requise pour chaque route
   if (pathname.startsWith("/admin")) {
     const permissions = (token.permissions as string[]) || [];
-    const isAdmin =
-      token.role === "Admin" || permissions.includes("CAN_MANAGE_USERS");
-    if (!isAdmin) {
+
+    const routePermissions: Record<string, string> = {
+      "/admin/projects": "CAN_MANAGE_PROJECTS",
+      "/admin/team": "CAN_MANAGE_TEAM",
+      "/admin/technologies": "CAN_MANAGE_TECHNOLOGIES",
+      "/admin/users": "CAN_MANAGE_USERS",
+      "/admin/roles": "CAN_MANAGE_ROLES",
+      "/admin/requests": "CAN_VIEW_REQUESTS",
+    };
+
+    const requiredPermission = Object.entries(routePermissions).find(
+      ([route]) => pathname === route || pathname.startsWith(route + "/")
+    )?.[1];
+
+    const hasAccess =
+      !requiredPermission || permissions.includes(requiredPermission);
+
+    if (!hasAccess) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
