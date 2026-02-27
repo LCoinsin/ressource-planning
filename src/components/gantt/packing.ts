@@ -171,6 +171,60 @@ export function groupAndPack(
   }));
 }
 
+/* ------------------------------------------------------------------ */
+/*  Hierarchical: Sprint sections with child tasks                     */
+/* ------------------------------------------------------------------ */
+
+export interface SprintSection {
+  sprint: GanttSprint;
+  taskLanes: PackedLane<GanttTask>[];
+}
+
+export interface HierarchicalResult {
+  /** Sections: one per sprint (sprint bar + packed child tasks) */
+  sprintSections: SprintSection[];
+  /** Orphan tasks (sprintId === null) packed into lanes */
+  orphanLanes: PackedLane<GanttTask>[];
+}
+
+/**
+ * Build a hierarchical structure: sprint rows + child tasks below,
+ * plus orphan tasks (no sprint) in their own section.
+ */
+export function buildHierarchy(
+  sprints: GanttSprint[],
+  tasks: GanttTask[]
+): HierarchicalResult {
+  const tasksBySprint = new Map<string, GanttTask[]>();
+  const orphanTasks: GanttTask[] = [];
+
+  for (const task of tasks) {
+    if (task.sprintId) {
+      if (!tasksBySprint.has(task.sprintId)) {
+        tasksBySprint.set(task.sprintId, []);
+      }
+      tasksBySprint.get(task.sprintId)!.push(task);
+    } else {
+      orphanTasks.push(task);
+    }
+  }
+
+  // Sort sprints by start date
+  const sortedSprints = [...sprints].sort(
+    (a, b) => new Date(a.dateDebut).getTime() - new Date(b.dateDebut).getTime()
+  );
+
+  const sprintSections: SprintSection[] = sortedSprints.map((sprint) => ({
+    sprint,
+    taskLanes: packItems(tasksBySprint.get(sprint.id) ?? []),
+  }));
+
+  return {
+    sprintSections,
+    orphanLanes: packItems(orphanTasks),
+  };
+}
+
 /**
  * Pack projects for Macro view.
  */

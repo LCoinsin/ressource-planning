@@ -9,8 +9,9 @@ import { TaskEditDialog } from "./task-edit-dialog";
 import { TaskCreateDialog } from "./task-create-dialog";
 import { SprintDetailSheet } from "./sprint-detail-sheet";
 import {
-  groupAndPack,
+  buildHierarchy,
   packProjects,
+  packItems,
   getTimeRange,
   getBarPositionPercent,
   getMinWidth,
@@ -19,7 +20,6 @@ import type {
   GanttTask,
   GanttSprint,
   GanttProject,
-  GanttItem,
 } from "./packing";
 import { differenceInDays } from "date-fns";
 import type { ZoomLevel } from "@/store/gantt-store";
@@ -40,32 +40,51 @@ interface GanttChartProps {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Detail view content (sprints + tasks)                              */
+/*  Shared: Today line                                                 */
+/* ------------------------------------------------------------------ */
+
+function TodayLine({ start, totalDays }: { start: Date; totalDays: number }) {
+  const todayOffset = differenceInDays(new Date(), start);
+  if (todayOffset < 0 || todayOffset > totalDays) return null;
+  return (
+    <div
+      className="absolute top-0 bottom-0 w-px bg-primary/40 z-[1]"
+      style={{ left: `${(todayOffset / totalDays) * 100}%` }}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Detail view: hierarchical sprint sections + orphans                */
 /* ------------------------------------------------------------------ */
 
 function GanttContentDetail({
-  items,
+  tasks,
+  sprints,
   start,
   end,
   zoom,
-  groupBy,
+  collapsedSprintIds,
   onTaskClick,
   onSprintClick,
+  onToggleCollapse,
 }: {
-  items: (GanttTask | GanttSprint)[];
+  tasks: GanttTask[];
+  sprints: GanttSprint[];
   start: Date;
   end: Date;
   zoom: ZoomLevel;
-  groupBy: "none" | "member" | "project";
+  collapsedSprintIds: Set<string>;
   onTaskClick?: (task: GanttTask) => void;
   onSprintClick?: (sprint: GanttSprint) => void;
+  onToggleCollapse: (sprintId: string) => void;
 }) {
   const totalDays = differenceInDays(end, start) + 1;
   const minWidth = getMinWidth(start, end, zoom);
 
-  const groups = useMemo(
-    () => groupAndPack(items, groupBy),
-    [items, groupBy]
+  const hierarchy = useMemo(
+    () => buildHierarchy(sprints, tasks),
+    [sprints, tasks]
   );
 
   return (
@@ -73,64 +92,95 @@ function GanttContentDetail({
       <div style={{ minWidth: Math.max(minWidth, 800) }}>
         <GanttHeader start={start} end={end} zoom={zoom} />
 
-        {groups.map((group, gi) => (
-          <div key={gi}>
-            {group.label && (
-              <div className="px-4 py-2 bg-muted/30 border-b border-border/30 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky left-0">
-                {group.label}
+        {/* Sprint sections */}
+        {hierarchy.sprintSections.map((section) => {
+          const collapsed = collapsedSprintIds.has(section.sprint.id);
+          const { left, width } = getBarPositionPercent(
+            section.sprint.dateDebut,
+            section.sprint.dateFin,
+            start,
+            end,
+            zoom
+          );
+
+          return (
+            <div key={section.sprint.id}>
+              {/* Sprint bar lane */}
+              <div
+                className="relative border-b border-border/20"
+                style={{ height: LANE_HEIGHT }}
+              >
+                <TodayLine start={start} totalDays={totalDays} />
+                <SprintBar
+                  sprint={section.sprint}
+                  left={left}
+                  width={width}
+                  collapsed={collapsed}
+                  onClick={onSprintClick ?? (() => {})}
+                  onToggleCollapse={() => onToggleCollapse(section.sprint.id)}
+                />
               </div>
-            )}
-            {group.lanes.map((lane, li) => (
+
+              {/* Child task lanes — hidden when collapsed */}
+              {!collapsed &&
+                section.taskLanes.map((lane, li) => (
+                  <div
+                    key={li}
+                    className="relative border-b border-border/20 bg-muted/10"
+                    style={{ height: LANE_HEIGHT }}
+                  >
+                    <TodayLine start={start} totalDays={totalDays} />
+                    {lane.tasks.map((task) => {
+                      const pos = getBarPositionPercent(
+                        task.dateDebut,
+                        task.dateFin,
+                        start,
+                        end,
+                        zoom
+                      );
+                      return (
+                        <GanttBar
+                          key={task.id}
+                          task={task}
+                          left={pos.left}
+                          width={pos.width}
+                          onClick={onTaskClick ?? (() => {})}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+            </div>
+          );
+        })}
+
+        {/* Orphan tasks (no sprint) */}
+        {hierarchy.orphanLanes.length > 0 && (
+          <div>
+            <div className="px-4 py-2 bg-muted/30 border-b border-border/30 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky left-0">
+              Hors sprint
+            </div>
+            {hierarchy.orphanLanes.map((lane, li) => (
               <div
                 key={li}
                 className="relative border-b border-border/20"
                 style={{ height: LANE_HEIGHT }}
               >
-                {/* Today line */}
-                {(() => {
-                  const todayOffset = differenceInDays(new Date(), start);
-                  if (todayOffset >= 0 && todayOffset <= totalDays) {
-                    return (
-                      <div
-                        className="absolute top-0 bottom-0 w-px bg-primary/40 z-[1]"
-                        style={{
-                          left: `${(todayOffset / totalDays) * 100}%`,
-                        }}
-                      />
-                    );
-                  }
-                  return null;
-                })()}
-
-                {lane.tasks.map((item: GanttTask | GanttSprint) => {
-                  const { left, width } = getBarPositionPercent(
-                    item.dateDebut,
-                    item.dateFin,
+                <TodayLine start={start} totalDays={totalDays} />
+                {lane.tasks.map((task) => {
+                  const pos = getBarPositionPercent(
+                    task.dateDebut,
+                    task.dateFin,
                     start,
                     end,
                     zoom
                   );
-
-                  if (item.type === "SPRINT") {
-                    const sprint = item as GanttSprint;
-                    return (
-                      <SprintBar
-                        key={sprint.id}
-                        sprint={sprint}
-                        left={left}
-                        width={width}
-                        onClick={onSprintClick ?? (() => {})}
-                      />
-                    );
-                  }
-
-                  const task = item as GanttTask;
                   return (
                     <GanttBar
                       key={task.id}
                       task={task}
-                      left={left}
-                      width={width}
+                      left={pos.left}
+                      width={pos.width}
                       onClick={onTaskClick ?? (() => {})}
                     />
                   );
@@ -138,9 +188,9 @@ function GanttContentDetail({
               </div>
             ))}
           </div>
-        ))}
+        )}
 
-        {items.length === 0 && (
+        {sprints.length === 0 && tasks.length === 0 && (
           <div className="text-center text-muted-foreground py-16 text-sm">
             Aucune tache a afficher
           </div>
@@ -181,22 +231,7 @@ function GanttContentMacro({
             className="relative border-b border-border/20"
             style={{ height: LANE_HEIGHT }}
           >
-            {/* Today line */}
-            {(() => {
-              const todayOffset = differenceInDays(new Date(), start);
-              if (todayOffset >= 0 && todayOffset <= totalDays) {
-                return (
-                  <div
-                    className="absolute top-0 bottom-0 w-px bg-primary/40 z-[1]"
-                    style={{
-                      left: `${(todayOffset / totalDays) * 100}%`,
-                    }}
-                  />
-                );
-              }
-              return null;
-            })()}
-
+            <TodayLine start={start} totalDays={totalDays} />
             {lane.tasks.map((project) => {
               const { left, width } = getBarPositionPercent(
                 project.dateDebut,
@@ -238,10 +273,11 @@ export function GanttContent({
   start,
   end,
   zoom,
-  groupBy,
   viewMode,
+  collapsedSprintIds,
   onTaskClick,
   onSprintClick,
+  onToggleCollapse,
 }: {
   tasks: GanttTask[];
   sprints: GanttSprint[];
@@ -251,8 +287,10 @@ export function GanttContent({
   zoom: ZoomLevel;
   groupBy: "none" | "member" | "project";
   viewMode: "detail" | "macro";
+  collapsedSprintIds: Set<string>;
   onTaskClick?: (task: GanttTask) => void;
   onSprintClick?: (sprint: GanttSprint) => void;
+  onToggleCollapse: (sprintId: string) => void;
 }) {
   if (viewMode === "macro") {
     return (
@@ -265,17 +303,17 @@ export function GanttContent({
     );
   }
 
-  const items: (GanttTask | GanttSprint)[] = [...sprints, ...tasks];
-
   return (
     <GanttContentDetail
-      items={items}
+      tasks={tasks}
+      sprints={sprints}
       start={start}
       end={end}
       zoom={zoom}
-      groupBy={groupBy}
+      collapsedSprintIds={collapsedSprintIds}
       onTaskClick={onTaskClick}
       onSprintClick={onSprintClick}
+      onToggleCollapse={onToggleCollapse}
     />
   );
 }
@@ -292,8 +330,15 @@ export function GanttChart({
   projectList,
   technologies,
 }: GanttChartProps) {
-  const { filterMemberId, filterProjectId, groupBy, zoom, viewMode } =
-    useGanttStore();
+  const {
+    filterMemberId,
+    filterProjectId,
+    groupBy,
+    zoom,
+    viewMode,
+    collapsedSprintIds,
+    toggleSprintCollapsed,
+  } = useGanttStore();
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedSprint, setSelectedSprint] = useState<GanttSprint | null>(
@@ -369,8 +414,10 @@ export function GanttChart({
           zoom={zoom}
           groupBy={groupBy}
           viewMode={viewMode}
+          collapsedSprintIds={collapsedSprintIds}
           onTaskClick={handleBarClick}
           onSprintClick={handleSprintClick}
+          onToggleCollapse={toggleSprintCollapsed}
         />
       </div>
 

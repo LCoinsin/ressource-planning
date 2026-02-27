@@ -69,8 +69,15 @@ export function DashboardClient({
   technologies,
   sprints: rawSprints,
 }: DashboardClientProps) {
-  const { zoom, filterMemberId, filterProjectId, groupBy, viewMode } =
-    useGanttStore();
+  const {
+    zoom,
+    filterMemberId,
+    filterProjectId,
+    groupBy,
+    viewMode,
+    collapsedSprintIds,
+    toggleSprintCollapsed,
+  } = useGanttStore();
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedSprint, setSelectedSprint] = useState<GanttSprint | null>(
@@ -236,8 +243,10 @@ export function DashboardClient({
           zoom={zoom}
           groupBy={groupBy}
           viewMode={viewMode}
+          collapsedSprintIds={collapsedSprintIds}
           onTaskClick={handleBarClick}
           onSprintClick={handleSprintClick}
+          onToggleCollapse={toggleSprintCollapsed}
         />
 
         {/* Capacity chart — only in detail view */}

@@ -141,19 +141,30 @@ interface SprintBarProps {
   sprint: GanttSprint;
   left: number;
   width: number;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   onClick: (sprint: GanttSprint) => void;
 }
 
-export function SprintBar({ sprint, left, width, onClick }: SprintBarProps) {
+export function SprintBar({
+  sprint,
+  left,
+  width,
+  collapsed,
+  onToggleCollapse,
+  onClick,
+}: SprintBarProps) {
   const color = "#6366F1"; // indigo for sprints
+  const ChevronIcon = collapsed
+    ? LucideIcons.ChevronRight
+    : LucideIcons.ChevronDown;
 
   return (
     <TooltipProvider>
       <Tooltip delayDuration={150}>
         <TooltipTrigger asChild>
-          <button
-            onClick={() => onClick(sprint)}
-            className="absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-2 px-2.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md border border-dashed"
+          <div
+            className="absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-1 px-1.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md border border-dashed"
             style={{
               left: `${left}%`,
               width: `${Math.max(width, 0.5)}%`,
@@ -162,7 +173,22 @@ export function SprintBar({ sprint, left, width, onClick }: SprintBarProps) {
               borderColor: `${color}60`,
             }}
           >
-            <span className="truncate flex-1">{sprint.titre}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapse();
+              }}
+              className="flex-shrink-0 p-0.5 rounded-md hover:bg-indigo-500/15 transition-colors"
+              title={collapsed ? "Deplier les taches" : "Masquer les taches"}
+            >
+              <ChevronIcon className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => onClick(sprint)}
+              className="flex items-center gap-2 flex-1 min-w-0 truncate"
+            >
+              <span className="truncate">{sprint.titre}</span>
+            </button>
             {width > 3 && (
               <span
                 className="flex-shrink-0 inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-semibold"
@@ -171,7 +197,7 @@ export function SprintBar({ sprint, left, width, onClick }: SprintBarProps) {
                 {sprint.taskCount} tache{sprint.taskCount !== 1 ? "s" : ""}
               </span>
             )}
-          </button>
+          </div>
         </TooltipTrigger>
         <TooltipContent
           side="top"
