@@ -17,7 +17,7 @@ import type { GanttTask } from "./packing";
 import { differenceInDays } from "date-fns";
 import type { ZoomLevel } from "@/store/gantt-store";
 
-const LANE_HEIGHT = 40;
+const LANE_HEIGHT = 48;
 
 type Member = { id: string; nom: string; prenom: string };
 type Project = { id: string; nom: string };

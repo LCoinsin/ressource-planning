@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { SafeSvgIcon } from "@/components/ui/safe-svg-icon";
 
 const ICON_OPTIONS = [
   "atom",
@@ -86,6 +87,7 @@ type Technology = {
   nom: string;
   couleur: string;
   iconName: string;
+  customSvg: string | null;
 };
 
 function getIcon(iconName: string) {
@@ -205,16 +207,18 @@ function TechnologyForm({
   const [nom, setNom] = useState(technology?.nom ?? "");
   const [couleur, setCouleur] = useState(technology?.couleur ?? "#3B82F6");
   const [iconName, setIconName] = useState(technology?.iconName ?? "code");
+  const [customSvg, setCustomSvg] = useState(technology?.customSvg ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
+      const svgValue = customSvg.trim() || null;
       if (technology) {
-        await updateTechnology(technology.id, { nom, couleur, iconName });
+        await updateTechnology(technology.id, { nom, couleur, iconName, customSvg: svgValue });
         toast.success("Technologie mise a jour");
       } else {
-        await createTechnology({ nom, couleur, iconName });
+        await createTechnology({ nom, couleur, iconName, customSvg: svgValue });
         toast.success("Technologie creee");
       }
       router.refresh();
@@ -246,13 +250,29 @@ function TechnologyForm({
         <Label>Icone</Label>
         <IconPicker value={iconName} onChange={setIconName} />
       </div>
+      <div className="space-y-2">
+        <Label>SVG personnalise (optionnel)</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Collez le code brut d&apos;un SVG. S&apos;il est renseigne, il sera utilise a la place de l&apos;icone Lucide.
+        </p>
+        <textarea
+          value={customSvg}
+          onChange={(e) => setCustomSvg(e.target.value)}
+          className="flex min-h-[80px] w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-xs font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          placeholder='<svg viewBox="0 0 24 24">...</svg>'
+        />
+      </div>
       {/* Preview */}
       <div className="rounded-xl border border-border/30 bg-muted/20 p-4 flex items-center gap-3">
         <div
           className="rounded-xl p-2.5"
           style={{ backgroundColor: `${couleur}20`, color: couleur }}
         >
-          {getIcon(iconName)}
+          {customSvg.trim() ? (
+            <SafeSvgIcon svg={customSvg} className="w-4 h-4" />
+          ) : (
+            getIcon(iconName)
+          )}
         </div>
         <span className="font-medium text-sm">{nom || "Apercu"}</span>
         <div
@@ -358,7 +378,11 @@ export function TechnologiesClient({
                       color: tech.couleur,
                     }}
                   >
-                    {getIcon(tech.iconName)}
+                    {tech.customSvg ? (
+                      <SafeSvgIcon svg={tech.customSvg} className="w-4 h-4" />
+                    ) : (
+                      getIcon(tech.iconName)
+                    )}
                   </div>
                   <div>
                     <p className="font-semibold text-sm">{tech.nom}</p>

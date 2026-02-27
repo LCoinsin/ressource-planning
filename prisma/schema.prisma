@@ -25,6 +25,7 @@ model Member {
   email        String?   @unique
   passwordHash String?
   isActive     Boolean   @default(true)
+  isResource   Boolean   @default(true) // false for admins who only configure the app
   roleId       String?
   appRole      Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
   dateArrivee  DateTime
@@ -48,6 +49,7 @@ model Technology {
   nom       String   @unique
   couleur   String   // hex color
   iconName  String   // Lucide icon name
+  customSvg String?  // raw SVG markup for custom icon
   createdAt DateTime @default(now())
   tasks     Task[]
 }

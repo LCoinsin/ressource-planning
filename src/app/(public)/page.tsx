@@ -15,7 +15,7 @@ export default async function PublicPage() {
       orderBy: { dateDebut: "asc" },
     }),
     prisma.member.findMany({
-      where: { isActive: true, dateDepart: null },
+      where: { isActive: true, isResource: true, dateDepart: null },
       include: {
         tasks: {
           where: {

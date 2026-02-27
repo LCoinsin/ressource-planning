@@ -33,6 +33,7 @@ interface CapacityData {
     id: string;
     dateArrivee: string;
     dateDepart: string | null;
+    isResource?: boolean;
   }[];
   start: Date;
   end: Date;
@@ -214,7 +215,7 @@ export function CapacityChart({
 function computePoint(
   periodStart: Date,
   periodEnd: Date,
-  members: { id: string; dateArrivee: string; dateDepart: string | null }[],
+  members: { id: string; dateArrivee: string; dateDepart: string | null; isResource?: boolean }[],
   tasks: { dateDebut: string; dateFin: string; load: number; members: { id: string }[] }[],
   labelFmt: string,
   fullLabelFmt: string
@@ -224,7 +225,9 @@ function computePoint(
   );
   const dayTime = midpoint.getTime();
 
+  // Exclude non-resource members (admins) from capacity calculation
   const capacite = members.filter((m) => {
+    if (m.isResource === false) return false;
     const arrive = new Date(m.dateArrivee).getTime();
     const depart = m.dateDepart ? new Date(m.dateDepart).getTime() : Infinity;
     return dayTime >= arrive && dayTime <= depart;

@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { SafeSvgIcon } from "@/components/ui/safe-svg-icon";
+import * as LucideIcons from "lucide-react";
 
 interface GanttBarProps {
   task: GanttTask;
@@ -48,6 +50,23 @@ function MemberAvatars({
   );
 }
 
+function TechIcon({ technology }: { technology: GanttTask["technology"] }) {
+  if (!technology) return null;
+  if (technology.customSvg) {
+    return <SafeSvgIcon svg={technology.customSvg} className="w-3.5 h-3.5" />;
+  }
+  const pascalCase = technology.iconName
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const IconComponent = (LucideIcons as any)[pascalCase] as
+    | React.ComponentType<{ className?: string }>
+    | undefined;
+  if (!IconComponent) return null;
+  return <IconComponent className="w-3.5 h-3.5 flex-shrink-0" />;
+}
+
 export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
   const isSprint = task.type === "SPRINT";
   const color = task.technology?.couleur ?? "#6B7280";
@@ -63,7 +82,7 @@ export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
           <button
             onClick={() => onClick(task)}
             className={cn(
-              "absolute top-1 bottom-1 rounded-xl text-[11px] font-medium flex items-center gap-1 px-2.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md",
+              "absolute top-2 bottom-2 rounded-xl text-[11px] font-medium flex items-center gap-2 px-2.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-md",
               isSprint ? "border border-dashed" : "shadow-sm"
             )}
             style={{
@@ -74,6 +93,7 @@ export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
               borderColor: isSprint ? `${color}60` : "transparent",
             }}
           >
+            {task.technology && <TechIcon technology={task.technology} />}
             <span className="truncate flex-1">
               {isSprint ? task.project.nom : task.titre}
             </span>

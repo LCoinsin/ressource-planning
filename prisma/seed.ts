@@ -77,7 +77,7 @@ async function main() {
   const hash = bcryptjs.hashSync("admin", 10);
   await prisma.member.upsert({
     where: { email: "admin@admin.com" },
-    update: { passwordHash: hash, roleId: adminRole.id },
+    update: { passwordHash: hash, roleId: adminRole.id, isResource: false },
     create: {
       nom: "Admin",
       prenom: "Super",
@@ -85,6 +85,7 @@ async function main() {
       email: "admin@admin.com",
       passwordHash: hash,
       isActive: true,
+      isResource: false,
       dateArrivee: new Date(),
       roleId: adminRole.id,
     },

@@ -18,6 +18,7 @@ type Member = {
   role: string;
   dateArrivee: string;
   dateDepart: string | null;
+  isResource: boolean;
 };
 type Project = { id: string; nom: string; client: string; status: string };
 type Technology = {
@@ -59,8 +60,8 @@ export function DashboardClient({
   );
   const minWidth = getMinWidth(start, end, zoom);
 
-  // Stats
-  const activeMembers = members.filter((m) => !m.dateDepart).length;
+  // Stats — exclude non-resource members (admins) from active count
+  const activeMembers = members.filter((m) => !m.dateDepart && m.isResource !== false).length;
   const activeProjects = projects.filter((p) => p.status === "ACTIVE").length;
   const activeTasks = tasks.filter((t) => {
     const now = Date.now();

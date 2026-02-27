@@ -12,7 +12,7 @@ import type { GanttTask } from "./packing";
 import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const LANE_HEIGHT = 36;
+const LANE_HEIGHT = 44;
 
 interface GanttPublicProps {
   tasks: GanttTask[];
@@ -32,7 +32,7 @@ function AnonymousBar({
   return (
     <div
       className={cn(
-        "absolute top-1 bottom-1 rounded-xl",
+        "absolute top-2 bottom-2 rounded-xl",
         isSprint ? "border border-dashed opacity-60" : "shadow-sm opacity-80"
       )}
       style={{

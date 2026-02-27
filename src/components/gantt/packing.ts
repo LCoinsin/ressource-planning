@@ -6,6 +6,7 @@ import {
   eachWeekOfInterval,
   eachMonthOfInterval,
   eachDayOfInterval,
+  startOfDay,
 } from "date-fns";
 
 export interface GanttTask {
@@ -24,6 +25,7 @@ export interface GanttTask {
     nom: string;
     couleur: string;
     iconName: string;
+    customSvg?: string | null;
   } | null;
 }
 
@@ -33,6 +35,10 @@ export interface PackedLane {
 
 /**
  * Pack tasks into lanes so non-overlapping tasks share the same row.
+ *
+ * Two tasks do NOT collide if A.endDate <= B.startDate (at day level).
+ * This means if task A ends on 2024-10-15 and task B starts on 2024-10-15,
+ * they can share the same lane (A finishes, B begins on the same day).
  */
 export function packTasks(tasks: GanttTask[]): PackedLane[] {
   const sorted = [...tasks].sort(
@@ -43,14 +49,16 @@ export function packTasks(tasks: GanttTask[]): PackedLane[] {
   const lanes: PackedLane[] = [];
 
   for (const task of sorted) {
-    const taskStart = new Date(task.dateDebut).getTime();
+    // Normalize to day-level to avoid time-of-day causing false collisions
+    const taskStartDay = startOfDay(new Date(task.dateDebut)).getTime();
 
     let placed = false;
     for (const lane of lanes) {
       const lastTask = lane.tasks[lane.tasks.length - 1];
-      const lastEnd = new Date(lastTask.dateFin).getTime();
+      const lastEndDay = startOfDay(new Date(lastTask.dateFin)).getTime();
 
-      if (taskStart >= lastEnd) {
+      // No collision: B starts on or after the day A ends
+      if (taskStartDay >= lastEndDay) {
         lane.tasks.push(task);
         placed = true;
         break;
