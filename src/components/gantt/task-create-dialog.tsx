@@ -44,7 +44,7 @@ export function TaskCreateDialog({
   const [loading, setLoading] = useState(false);
 
   const [titre, setTitre] = useState("");
-  const type = "TASK";
+  const [type, setType] = useState<"SPRINT" | "TASK">("TASK");
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [load, setLoad] = useState("1");
@@ -54,6 +54,7 @@ export function TaskCreateDialog({
 
   function reset() {
     setTitre("");
+    setType("TASK");
     setDateDebut("");
     setDateFin("");
     setLoad("1");
@@ -68,7 +69,7 @@ export function TaskCreateDialog({
     try {
       await createTask({
         titre,
-        type: type as "SPRINT" | "TASK",
+        type,
         dateDebut,
         dateFin,
         load: parseFloat(load),
@@ -108,6 +109,19 @@ export function TaskCreateDialog({
               className="rounded-xl border-border/50"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <Select value={type} onValueChange={(v) => setType(v as "SPRINT" | "TASK")}>
+              <SelectTrigger className="rounded-xl border-border/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TASK">Tache</SelectItem>
+                <SelectItem value="SPRINT">Sprint</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
