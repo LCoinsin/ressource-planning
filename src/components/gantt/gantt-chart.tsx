@@ -64,6 +64,7 @@ function GanttContentDetail({
   start,
   end,
   zoom,
+  showLoad,
   collapsedSprintIds,
   onTaskClick,
   onSprintClick,
@@ -74,6 +75,7 @@ function GanttContentDetail({
   start: Date;
   end: Date;
   zoom: ZoomLevel;
+  showLoad: boolean;
   collapsedSprintIds: Set<string>;
   onTaskClick?: (task: GanttTask) => void;
   onSprintClick?: (sprint: GanttSprint) => void;
@@ -144,6 +146,7 @@ function GanttContentDetail({
                           task={task}
                           left={pos.left}
                           width={pos.width}
+                          showLoad={showLoad}
                           onClick={onTaskClick ?? (() => {})}
                         />
                       );
@@ -274,6 +277,7 @@ export function GanttContent({
   end,
   zoom,
   viewMode,
+  showLoad,
   collapsedSprintIds,
   onTaskClick,
   onSprintClick,
@@ -287,6 +291,7 @@ export function GanttContent({
   zoom: ZoomLevel;
   groupBy: "none" | "member" | "project";
   viewMode: "detail" | "macro";
+  showLoad: boolean;
   collapsedSprintIds: Set<string>;
   onTaskClick?: (task: GanttTask) => void;
   onSprintClick?: (sprint: GanttSprint) => void;
@@ -310,6 +315,7 @@ export function GanttContent({
       start={start}
       end={end}
       zoom={zoom}
+      showLoad={showLoad}
       collapsedSprintIds={collapsedSprintIds}
       onTaskClick={onTaskClick}
       onSprintClick={onSprintClick}
@@ -336,6 +342,7 @@ export function GanttChart({
     groupBy,
     zoom,
     viewMode,
+    showLoad,
     collapsedSprintIds,
     toggleSprintCollapsed,
   } = useGanttStore();
@@ -414,6 +421,7 @@ export function GanttChart({
           zoom={zoom}
           groupBy={groupBy}
           viewMode={viewMode}
+          showLoad={showLoad}
           collapsedSprintIds={collapsedSprintIds}
           onTaskClick={handleBarClick}
           onSprintClick={handleSprintClick}

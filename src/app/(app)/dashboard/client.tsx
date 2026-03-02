@@ -75,6 +75,7 @@ export function DashboardClient({
     filterProjectId,
     groupBy,
     viewMode,
+    showLoad,
     collapsedSprintIds,
     toggleSprintCollapsed,
   } = useGanttStore();
@@ -243,6 +244,7 @@ export function DashboardClient({
           zoom={zoom}
           groupBy={groupBy}
           viewMode={viewMode}
+          showLoad={showLoad}
           collapsedSprintIds={collapsedSprintIds}
           onTaskClick={handleBarClick}
           onSprintClick={handleSprintClick}

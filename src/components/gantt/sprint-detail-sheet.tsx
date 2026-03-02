@@ -17,6 +17,7 @@ import {
   createSprintTask,
   toggleTaskCompleted,
   deleteSprintTask,
+  deleteSprint,
 } from "@/actions/sprints";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -52,6 +53,7 @@ export function SprintDetailSheet({
   const [description, setDescription] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+  const [deletingSprintId, setDeletingSprintId] = useState<string | null>(null);
 
   // Load sprint details when opened
   useEffect(() => {
@@ -141,6 +143,24 @@ export function SprintDetailSheet({
     });
   }
 
+  async function handleDeleteSprint() {
+    if (!sprint) return;
+    const confirmed = window.confirm(
+      `Supprimer le sprint "${sprint.titre}" et toutes ses taches ?`
+    );
+    if (!confirmed) return;
+    setDeletingSprintId(sprint.id);
+    try {
+      await deleteSprint(sprint.id);
+      toast.success("Sprint et ses taches supprimes");
+      onOpenChange(false);
+      router.refresh();
+    } catch {
+      toast.error("Erreur lors de la suppression du sprint");
+    }
+    setDeletingSprintId(null);
+  }
+
   async function handleDeleteTask(taskId: string) {
     setLoadingTaskId(taskId);
     try {
@@ -158,7 +178,23 @@ export function SprintDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-lg">{sprint.titre}</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-lg">{sprint.titre}</SheetTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDeleteSprint}
+              disabled={deletingSprintId === sprint.id}
+              title="Supprimer le sprint"
+            >
+              {deletingSprintId === sprint.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
           <SheetDescription className="flex items-center gap-2 text-xs">
             <CalendarDays className="h-3.5 w-3.5" />
             {format(new Date(sprint.dateDebut), "dd MMM", { locale: fr })} -{" "}

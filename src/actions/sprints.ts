@@ -67,6 +67,7 @@ export async function updateSprint(
 }
 
 export async function deleteSprint(id: string) {
+  await prisma.task.deleteMany({ where: { sprintId: id } });
   await prisma.sprint.delete({ where: { id } });
   revalidatePath("/dashboard");
 }

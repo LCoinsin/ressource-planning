@@ -20,6 +20,7 @@ interface GanttBarProps {
   task: GanttTask;
   left: number;
   width: number;
+  showLoad?: boolean;
   onClick: (task: GanttTask) => void;
 }
 
@@ -70,7 +71,7 @@ function TechIcon({ technology }: { technology: GanttTask["technology"] }) {
   return <IconComponent className="w-3.5 h-3.5 flex-shrink-0" />;
 }
 
-export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
+export function GanttBar({ task, left, width, showLoad = true, onClick }: GanttBarProps) {
   const color = task.technology?.couleur ?? "#6B7280";
   const loadPerMember =
     task.members.length > 0
@@ -122,10 +123,12 @@ export function GanttBar({ task, left, width, onClick }: GanttBarProps) {
               {format(new Date(task.dateDebut), "dd MMM", { locale: fr })} -{" "}
               {format(new Date(task.dateFin), "dd MMM yyyy", { locale: fr })}
             </p>
-            <p className="text-xs">
-              Charge : {Math.round(task.load * 100)}% total
-              {task.members.length > 1 && ` (${loadPerMember}% / pers.)`}
-            </p>
+            {showLoad && (
+              <p className="text-xs">
+                Charge : {Math.round(task.load * 100)}% total
+                {task.members.length > 1 && ` (${loadPerMember}% / pers.)`}
+              </p>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>

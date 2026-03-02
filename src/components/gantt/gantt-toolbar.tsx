@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useGanttStore, type ZoomLevel, type GanttViewMode } from "@/store/gantt-store";
-import { RotateCcw, Calendar, CalendarDays, CalendarRange, Layers, FolderKanban } from "lucide-react";
+import { RotateCcw, Calendar, CalendarDays, CalendarRange, Layers, FolderKanban, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Member = { id: string; nom: string; prenom: string };
@@ -39,11 +39,13 @@ export function GanttToolbar({
     groupBy,
     zoom,
     viewMode,
+    showLoad,
     setFilterMemberId,
     setFilterProjectId,
     setGroupBy,
     setZoom,
     setViewMode,
+    setShowLoad,
     resetFilters,
   } = useGanttStore();
 
@@ -143,6 +145,20 @@ export function GanttToolbar({
               <SelectItem value="project">Par projet</SelectItem>
             </SelectContent>
           </Select>
+
+          <button
+            onClick={() => setShowLoad(!showLoad)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all border",
+              showLoad
+                ? "bg-background text-foreground border-border/50 shadow-sm"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            )}
+            title={showLoad ? "Masquer la charge" : "Afficher la charge"}
+          >
+            <Percent className="h-3.5 w-3.5" />
+            Charge
+          </button>
 
           <Button
             variant="ghost"
