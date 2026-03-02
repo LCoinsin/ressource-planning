@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { MultiMemberSelect } from "@/components/multi-member-select";
 import { createTask } from "@/actions/tasks";
+import { createSprint } from "@/actions/sprints";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -67,17 +68,27 @@ export function TaskCreateDialog({
     e.preventDefault();
     setLoading(true);
     try {
-      await createTask({
-        titre,
-        type,
-        dateDebut,
-        dateFin,
-        load: parseFloat(load),
-        projectId,
-        memberIds,
-        technologyId: technologyId || null,
-      });
-      toast.success("Tache creee");
+      if (type === "SPRINT") {
+        await createSprint({
+          titre,
+          dateDebut,
+          dateFin,
+          projectId,
+        });
+        toast.success("Sprint cree");
+      } else {
+        await createTask({
+          titre,
+          type: "TASK",
+          dateDebut,
+          dateFin,
+          load: parseFloat(load),
+          projectId,
+          memberIds,
+          technologyId: technologyId || null,
+        });
+        toast.success("Tache creee");
+      }
       router.refresh();
       reset();
       setOpen(false);
@@ -124,20 +135,22 @@ export function TaskCreateDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="create-load">Charge (0-1)</Label>
-            <Input
-              id="create-load"
-              type="number"
-              min="0"
-              max="1"
-              step="0.1"
-              value={load}
-              onChange={(e) => setLoad(e.target.value)}
-              className="rounded-xl border-border/50"
-              required
-            />
-          </div>
+          {type === "TASK" && (
+            <div className="space-y-2">
+              <Label htmlFor="create-load">Charge (0-1)</Label>
+              <Input
+                id="create-load"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                value={load}
+                onChange={(e) => setLoad(e.target.value)}
+                className="rounded-xl border-border/50"
+                required
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -180,40 +193,44 @@ export function TaskCreateDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Membres</Label>
-            <MultiMemberSelect
-              members={members}
-              selectedIds={memberIds}
-              onChange={setMemberIds}
-            />
-          </div>
+          {type === "TASK" && (
+            <>
+              <div className="space-y-2">
+                <Label>Membres</Label>
+                <MultiMemberSelect
+                  members={members}
+                  selectedIds={memberIds}
+                  onChange={setMemberIds}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label>Technologie</Label>
-            <Select
-              value={technologyId || "none"}
-              onValueChange={(v) => setTechnologyId(v === "none" ? "" : v)}
-            >
-              <SelectTrigger className="rounded-xl border-border/50">
-                <SelectValue placeholder="Aucune" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucune</SelectItem>
-                {technologies.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: t.couleur }}
-                      />
-                      {t.nom}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="space-y-2">
+                <Label>Technologie</Label>
+                <Select
+                  value={technologyId || "none"}
+                  onValueChange={(v) => setTechnologyId(v === "none" ? "" : v)}
+                >
+                  <SelectTrigger className="rounded-xl border-border/50">
+                    <SelectValue placeholder="Aucune" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune</SelectItem>
+                    {technologies.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: t.couleur }}
+                          />
+                          {t.nom}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button
